@@ -24,6 +24,27 @@ O servidor sobe em `http://localhost:3000`.
 
 ---
 
+## Visualizador interativo
+
+Com o servidor rodando, acesse **`http://localhost:3000`** no browser para abrir o painel de visualização da memória interna.
+
+O dashboard exibe em tempo real (polling a cada 2 segundos) o estado completo do backend:
+
+| Seção | O que mostra |
+|-------|-------------|
+| **Pipeline de eventos** | Fluxo animado das 5 etapas: requisição → evento → memória → algoritmo → resposta |
+| **Memória em tempo real** | Contadores de eventos, itens na lista e produtos no catálogo |
+| **Algoritmos** | Saída ao vivo dos 5 algoritmos de recomendação para o usuário selecionado |
+| **Matriz de co-ocorrência** | Pares de produtos que aparecem juntos nas listas, com barras de frequência |
+| **Log de eventos** | Histórico cronológico de todos os eventos registrados |
+| **Carrinhos virtuais** | Agrupamento de ADD_TO_LIST por usuário (base do algoritmo de co-ocorrência) |
+
+Use os botões de usuário (1–4) para alternar o contexto e observar como as recomendações mudam conforme o histórico de cada usuário.
+
+O botão **Resetar Memória** chama `POST /debug/reset` e zera todos os arrays — útil para recomeçar uma demonstração do zero sem reiniciar o servidor.
+
+---
+
 ## Testando manualmente
 
 ### Seed de dados
