@@ -102,30 +102,40 @@ async function seed() {
   for (const userId of [1, 2, 3]) {
     const recs = await get('/recommendations', userId);
     console.log(`\n  user ${userId} → ${recs.length} recomendações`);
-    recs.slice(0, 3).forEach((p) =>
-      console.log(`    - [${p.category}] ${p.name}`),
-    );
+    recs
+      .slice(0, 3)
+      .forEach((p) => console.log(`    - [${p.category}] ${p.name}`));
   }
 
   section('TESTE — GET /recommendations/trending');
   const trending = await get('/recommendations/trending');
   console.log(`\n  top 5 trending:`);
-  trending.slice(0, 5).forEach((p) => console.log(`    - ${p.name} (id ${p.id})`));
+  trending
+    .slice(0, 5)
+    .forEach((p) => console.log(`    - ${p.name} (id ${p.id})`));
 
   section('TESTE — GET /recommendations/restock');
-  console.log('\n  user 1 (comprou Leite e Iogurte agora → ainda não vencido):');
+  console.log(
+    '\n  user 1 (comprou Leite e Iogurte agora → ainda não vencido):',
+  );
   const restock1 = await get('/recommendations/restock', 1);
   console.log(`    resultado: ${restock1.length} produto(s) para recompra`);
-  console.log('  (restock aparece após o intervalo da categoria: Laticínios = 7 dias)');
+  console.log(
+    '  (restock aparece após o intervalo da categoria: Laticínios = 7 dias)',
+  );
 
   section('TESTE — GET /products/:id/recommendations (co-ocorrência)');
   console.log('\n  Arroz (42) → esperado: Feijão, Óleo, Macarrão');
   const relArroz = await get('/products/42/recommendations');
-  relArroz.slice(0, 4).forEach((p) => console.log(`    - ${p.name} (id ${p.id})`));
+  relArroz
+    .slice(0, 4)
+    .forEach((p) => console.log(`    - ${p.name} (id ${p.id})`));
 
   console.log('\n  Frango (33) → esperado: Pizza, Batata Palito');
   const relFrango = await get('/products/33/recommendations');
-  relFrango.slice(0, 3).forEach((p) => console.log(`    - ${p.name} (id ${p.id})`));
+  relFrango
+    .slice(0, 3)
+    .forEach((p) => console.log(`    - ${p.name} (id ${p.id})`));
 
   section('SEED — Lista parcial para testar suggestions');
   // user 10 adiciona só Arroz → suggestions deve sugerir Feijão, Óleo, Macarrão
@@ -135,9 +145,9 @@ async function seed() {
   section('TESTE — GET /shopping-list/suggestions');
   console.log('\n  user 10 tem só Arroz → espera Feijão, Óleo, Macarrão');
   const suggestions = await get('/shopping-list/suggestions', 10);
-  suggestions.slice(0, 5).forEach((p) =>
-    console.log(`    - ${p.name} (id ${p.id})`),
-  );
+  suggestions
+    .slice(0, 5)
+    .forEach((p) => console.log(`    - ${p.name} (id ${p.id})`));
 
   section('TESTE — GET /stats');
   print('views por categoria', await get('/stats/categories'));
