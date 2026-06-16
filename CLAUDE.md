@@ -1,40 +1,40 @@
 # cartwise-backend
 
-Backend NestJS para o app mobile **CartWise**, desenvolvido como trabalho acadêmico de Desenvolvimento Mobile. Implementa um sistema de recomendação personalizada de produtos de supermercado baseado em comportamento do usuário, sem banco de dados — tudo em memória via arrays TypeScript.
+NestJS backend for the **CartWise** mobile app, built as an academic project for a Mobile Development course. Implements a personalized product recommendation system based on user behavior — no database, everything in-memory via TypeScript arrays.
 
-## Contexto
+## Context
 
-O CartWise original é um app de lista de compras sem personalização. Este projeto adiciona uma camada de recomendação inspirada em marketplaces reais (Amazon, iFood), usando heurísticas simples mas funcionais, demonstrando que diferentes comportamentos geram diferentes recomendações.
+CartWise is a shopping list app with no personalization. This project adds a recommendation layer inspired by real marketplaces (Amazon, iFood), using simple but functional heuristics to demonstrate that different user behaviors produce different recommendations.
 
-**Critério de sucesso:** usuários com históricos distintos recebem recomendações distintas.
+**Success criterion:** users with distinct histories receive distinct recommendations.
 
-## Arquitetura
+## Architecture
 
 - **Framework:** NestJS (TypeScript)
-- **Persistência:** nenhuma — três arrays em memória são a fonte de verdade:
-  - `src/events/data/events.data.ts` → todos os eventos de comportamento
-  - `src/products/data/products.data.ts` → catálogo de produtos (somente leitura)
-  - `src/shopping-list/data/shopping-list.data.ts` → lista de compras acumulada
-- **Autenticação:** nenhuma — `userId` é passado via header `user-id` em toda requisição que precisar de personalização
-- **Sem:** banco de dados, Prisma, TypeORM, Mongoose, repositórios, DTOs formais, validação de entrada além do básico
+- **Persistence:** none — three in-memory arrays are the source of truth:
+  - `src/events/data/events.data.ts` → all behavior events
+  - `src/products/data/products.data.ts` → product catalog (read-only)
+  - `src/shopping-list/data/shopping-list.data.ts` → accumulated shopping list
+- **Auth:** none — `userId` is passed via `user-id` header on every request that requires personalization
+- **No:** database, Prisma, TypeORM, Mongoose, repositories, formal DTOs, or input validation beyond the basics
 
-## Estrutura de Módulos
+## Module structure
 
 ```
 src/
-  events/           # Registro e leitura de eventos de comportamento
-  products/         # Catálogo + eventos de view + produtos relacionados
-  shopping-list/    # Lista de compras + sugestões por co-ocorrência
-  recommendations/  # Recomendações personalizadas, trending e restock
-  stats/            # Endpoints de debug — métricas brutas dos eventos
-  purchases/        # Registro de compras (gera evento PURCHASE)
+  events/           # Behavior event registration and retrieval
+  products/         # Catalog + view events + related products
+  shopping-list/    # Shopping list + co-occurrence suggestions
+  recommendations/  # Personalized, trending, and restock recommendations
+  stats/            # Debug endpoints — raw event metrics
+  purchases/        # Purchase registration (generates PURCHASE event)
 ```
 
-Cada módulo segue sempre a mesma estrutura:
+Every module follows the same layout:
 ```
-modulo/
-  entities/   # interfaces TypeScript
-  data/       # array em memória (somente nos módulos com estado)
+module/
+  entities/   # TypeScript interfaces
+  data/       # in-memory array (only in stateful modules)
   *.service.ts
   *.controller.ts
   *.module.ts
@@ -42,43 +42,43 @@ modulo/
 
 ## Endpoints
 
-### Produtos
-| Método | Path | Header | Descrição |
-|--------|------|--------|-----------|
-| GET | `/products` | — | Lista todos os produtos |
-| GET | `/products/:id` | `user-id` | Detalhe do produto + registra PRODUCT_VIEW |
-| GET | `/products/:id/recommendations` | — | Produtos relacionados por co-ocorrência |
+### Products
+| Method | Path | Header | Description |
+|--------|------|--------|-------------|
+| GET | `/products` | — | List all products |
+| GET | `/products/:id` | `user-id` | Product detail + registers PRODUCT_VIEW |
+| GET | `/products/:id/recommendations` | — | Related products by co-occurrence |
 
-### Lista de Compras
-| Método | Path | Header | Body | Descrição |
-|--------|------|--------|------|-----------|
-| POST | `/shopping-list/items` | `user-id` | `{ productId }` | Adiciona produto + registra ADD_TO_LIST |
-| GET | `/shopping-list/items` | — | — | Lista todos os itens |
-| GET | `/shopping-list/suggestions` | `user-id` | — | Sugere produtos baseado na lista atual |
+### Shopping list
+| Method | Path | Header | Body | Description |
+|--------|------|--------|------|-------------|
+| POST | `/shopping-list/items` | `user-id` | `{ productId }` | Add product + registers ADD_TO_LIST |
+| GET | `/shopping-list/items` | — | — | List all items |
+| GET | `/shopping-list/suggestions` | `user-id` | — | Suggest products based on current list |
 
-### Compras
-| Método | Path | Header | Body | Descrição |
-|--------|------|--------|------|-----------|
-| POST | `/purchases` | `user-id` | `{ productId }` | Registra compra + evento PURCHASE |
+### Purchases
+| Method | Path | Header | Body | Description |
+|--------|------|--------|------|-------------|
+| POST | `/purchases` | `user-id` | `{ productId }` | Register purchase + PURCHASE event |
 
-### Recomendações
-| Método | Path | Header | Descrição |
-|--------|------|--------|-----------|
-| GET | `/recommendations` | `user-id` | Personalizada por categoria (score híbrido) |
-| GET | `/recommendations/trending` | — | Produtos mais adicionados globalmente |
-| GET | `/recommendations/restock` | `user-id` | Produtos vencidos para recompra |
+### Recommendations
+| Method | Path | Header | Description |
+|--------|------|--------|-------------|
+| GET | `/recommendations` | `user-id` | Personalized by category (hybrid score) |
+| GET | `/recommendations/trending` | — | Most added products globally |
+| GET | `/recommendations/restock` | `user-id` | Overdue products for repurchase |
 
-### Eventos e Stats (debug)
-| Método | Path | Descrição |
-|--------|------|-----------|
-| GET | `/events` | Todos os eventos registrados |
-| GET | `/stats/products` | Views por productId |
-| GET | `/stats/categories` | Views por categoria |
-| GET | `/stats/add-to-list` | Adições por productId |
+### Events & stats (debug)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/events` | All registered events |
+| GET | `/stats/products` | Views per productId |
+| GET | `/stats/categories` | Views per category |
+| GET | `/stats/add-to-list` | Additions per productId |
 
-## Sistema de Eventos
+## Event system
 
-Todo comportamento do usuário gera um evento. Os serviços criam os eventos internamente — não há endpoint externo para isso.
+Every user action generates an event. Services create events internally — there is no external endpoint for this.
 
 ```ts
 interface Event {
@@ -89,49 +89,49 @@ interface Event {
 }
 ```
 
-| Evento | Gerado por | Peso na recomendação |
-|--------|-----------|----------------------|
+| Event | Generated by | Recommendation weight |
+|-------|--------------|-----------------------|
 | `PRODUCT_VIEW` | `GET /products/:id` | 1 |
 | `ADD_TO_LIST` | `POST /shopping-list/items` | 3 |
-| `PURCHASE` | `POST /purchases` | usado no restock |
+| `PURCHASE` | `POST /purchases` | used in restock |
 
-## Algoritmos de Recomendação
+## Recommendation algorithms
 
-### 1. Personalizada por categoria — `GET /recommendations`
-Score híbrido: soma `PRODUCT_VIEW × 1 + ADD_TO_LIST × 3` por categoria. Retorna produtos da categoria top que o usuário ainda não interagiu.
+### 1. Personalized by category — `GET /recommendations`
+Hybrid score: sums `PRODUCT_VIEW × 1 + ADD_TO_LIST × 3` per category. Returns products from the top category the user hasn't interacted with yet.
 
-### 2. Relacionados por co-ocorrência — `GET /products/:id/recommendations`
-Agrupa eventos `ADD_TO_LIST` por `userId` (cada usuário = um "carrinho"). Para cada carrinho que contém o produto alvo, conta os outros produtos. Retorna ordenado por score.
+### 2. Related by co-occurrence — `GET /products/:id/recommendations`
+Groups `ADD_TO_LIST` events by `userId` (each user = a "cart"). For each cart containing the target product, counts the other products present. Returns sorted by score.
 
-### 3. Sugestões para a lista — `GET /shopping-list/suggestions`
-Mesma engine de co-ocorrência, mas aplicada sobre todos os produtos da lista atual do usuário. Agrega scores de todos os itens da lista e exclui o que já está nela.
+### 3. List suggestions — `GET /shopping-list/suggestions`
+Same co-occurrence engine, applied across all products currently in the user's list. Aggregates scores from all list items and excludes what's already in the list.
 
 ### 4. Trending — `GET /recommendations/trending`
-Top 10 produtos por contagem de `ADD_TO_LIST` nos últimos 50 eventos desse tipo. Global, sem personalização.
+Top 10 products by `ADD_TO_LIST` count across the last 50 events of that type. Global, not personalized.
 
 ### 5. Restock — `GET /recommendations/restock`
-Para cada produto comprado pelo usuário (`PURCHASE`), calcula dias desde a última compra e compara com o intervalo de recompra da categoria:
+For each product the user has purchased (`PURCHASE`), computes days since last purchase and compares against the category repurchase interval:
 
-| Categoria | Dias |
-|-----------|------|
-| Laticínios, Hortifruti, Carnes, Padaria | 7 |
-| Bebidas, Congelados | 14 |
-| Limpeza, Higiene, Mercearia | 30 |
+| Category | Days |
+|----------|------|
+| Dairy, Produce, Meat, Bakery | 7 |
+| Beverages, Frozen | 14 |
+| Cleaning, Hygiene, Grocery | 30 |
 
-## Convenções
+## Conventions
 
-- **Sem comentários no código** — nomes dos identificadores devem ser autoexplicativos
-- `userId` sempre via header `user-id` (string, convertido com `+userId`)
-- Arrays de dados são importados diretamente nos services (`import { events } from 'src/events/data/events.data'`)
-- `EventsModule` exporta `EventsService`; módulos que precisam dele importam o módulo (não declaram o service como provider diretamente)
-- Sem DTOs formais — `@Body('campo')` direto no controller
-- Para rodar o seed de teste: `node seed.js` (requer servidor rodando em localhost:3000)
+- **No comments in code** — identifiers must be self-explanatory
+- `userId` always via `user-id` header (string, converted with `+userId`)
+- Data arrays are imported directly into services (`import { events } from 'src/events/data/events.data'`)
+- `EventsModule` exports `EventsService`; modules that need it import the module (not declare the service as a provider directly)
+- No formal DTOs — `@Body('field')` directly in the controller
+- To run the test seed: `node seed.js` (requires server running at localhost:3000)
 
-## Evolução Futura (não implementada)
+## Future improvements (not implemented)
 
-- Persistência com SQLite ou PostgreSQL
-- Autenticação real (JWT)
-- Cache com Redis
-- Dashboard de métricas administrativo
-- Containerização com Docker
-- Simulação de múltiplos usuários concorrentes
+- Persistence with SQLite or PostgreSQL
+- Real authentication (JWT)
+- Redis cache
+- Admin metrics dashboard
+- Docker containerization
+- Concurrent multi-user simulation
