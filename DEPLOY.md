@@ -1,82 +1,68 @@
 # Deploy — Lista Smart Backend
 
-Guia para subir o backend na VPS Hetzner, rodando como user `deploy` (não-root), atrás de Nginx + PM2, no domínio **listasmart.cakowebber.dev** (Cloudflare).
+Guide for deploying the backend on a Linux VPS, running as a non-root user, behind Nginx + PM2, with Cloudflare handling TLS.
 
-- **App roda na porta:** `3003` (configurável via `.env`)
+- **App port:** `3003` (configurable via `.env`)
 - **Process manager:** PM2 (fork mode)
 - **Reverse proxy:** Nginx → `127.0.0.1:3003`
-- **TLS:** Cloudflare (proxy laranja) — origin pode usar Let's Encrypt ou Cloudflare Origin Cert
+- **TLS:** Cloudflare proxy (orange cloud) — origin can use Let's Encrypt or Cloudflare Origin Cert
 
-> Premissas: Node + pnpm + PM2 + Nginx já instalados na VPS (você já roda outros projetos como o enertracker). O subdomínio `listasmart.cakowebber.dev` já existe na Cloudflare apontando para o IP da VPS.
+> Prerequisites: Node, pnpm, PM2, and Nginx installed on the VPS. The subdomain `listasmart.yourdomain.com` already exists in Cloudflare pointing to the VPS IP.
 
 ---
 
-## 1. Variáveis de ambiente
+## 1. Environment variables
 
-O projeto usa `@nestjs/config` e lê um `.env` na raiz. Variáveis disponíveis:
+The project uses `@nestjs/config` and reads a `.env` at the root. The `.env` is **not** committed to git. Use `.env.example` as reference.
 
-| Variável | Default | Descrição |
-|----------|---------|-----------|
-| `PORT` | `3003` | Porta em que o NestJS escuta |
-| `CORS_ORIGIN` | origens localhost | Lista de origens permitidas, separadas por vírgula |
-
-O `.env` **não** vai para o git (está no `.gitignore`). Use `.env.example` como referência.
-
-`.env` de produção (na VPS):
+`.env` for production:
 
 ```env
 PORT=3003
-CORS_ORIGIN=https://listasmart.cakowebber.dev
+CORS_ORIGIN=https://listasmart.yourdomain.com
 ```
 
-> Se o app mobile (Expo/React Native) consumir a API direto, adicione as origens dele à lista, separadas por vírgula. Requisições nativas (sem `Origin`) não são bloqueadas por CORS.
+> If a mobile client (Expo/React Native) consumes the API directly, add its origins to `CORS_ORIGIN` as a comma-separated list. Native requests (no `Origin` header) are not blocked by CORS.
 
 ---
 
-## 2. Clonar e buildar na VPS
-
-Logado como `deploy`:
+## 2. Clone and build
 
 ```bash
 cd ~
-git clone <URL_DO_REPO> lista-smart-backend
+git clone <REPO_URL> lista-smart-backend
 cd lista-smart-backend
 
-# Instalar dependências (inclui devDeps p/ buildar)
 pnpm install
 
-# Criar o .env de produção
 cp .env.example .env
-nano .env   # ajuste PORT e CORS_ORIGIN
+nano .env   # set PORT and CORS_ORIGIN
 
-# Compilar TypeScript -> dist/
 pnpm build
 ```
 
-Isso gera `dist/main.js`, que é o entrypoint usado pelo PM2.
+This compiles TypeScript to `dist/main.js`, the entrypoint used by PM2.
 
 ---
 
-## 3. Rodar com PM2
+## 3. Run with PM2
 
-O repo já inclui `ecosystem.config.js`. **Ajuste o `cwd`** se você clonou em outro caminho (o default é `/home/deploy/lista-smart-backend`).
+The repo includes `ecosystem.config.js`. Adjust `cwd` if you cloned to a different path (default: `/home/<user>/lista-smart-backend`).
 
 ```bash
 cd ~/lista-smart-backend
 
-# Subir
 pm2 start ecosystem.config.js
 
-# Conferir
 pm2 status
 pm2 logs listasmart-backend --lines 30
 
-# Persistir entre reboots (rode o comando que o pm2 startup imprimir, uma única vez)
+# Persist across reboots
 pm2 save
-pm2 startup   # siga a instrução exibida (provavelmente já configurado p/ os outros apps)
+pm2 startup   # follow the printed instruction
 ```
 
-Teste local na VPS:
+Test locally on the VPS:
 
 ```bash
 curl http://127.0.0.1:3003/products | head
@@ -86,12 +72,12 @@ curl http://127.0.0.1:3003/products | head
 
 ## 4. Nginx
 
-Crie `/etc/nginx/sites-available/listasmart.cakowebber.dev` (precisa de sudo):
+Create `/etc/nginx/sites-available/listasmart.yourdomain.com`:
 
 ```nginx
 server {
     listen 80;
-    server_name listasmart.cakowebber.dev;
+    server_name listasmart.yourdomain.com;
 
     location / {
         proxy_pass http://127.0.0.1:3003;
@@ -107,10 +93,10 @@ server {
 }
 ```
 
-Ativar:
+Enable and reload:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/listasmart.cakowebber.dev /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/listasmart.yourdomain.com /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -119,43 +105,39 @@ sudo systemctl reload nginx
 
 ## 5. TLS / Cloudflare
 
-O subdomínio já está na Cloudflare. Duas opções para o certificado de origem:
+**Option A — Flexible (simpler):**
+- Cloudflare dashboard: SSL/TLS → **Flexible**.
+- Nginx stays on `:80`. Cloudflare handles HTTPS with the client.
+- Traffic between Cloudflare and the VPS is HTTP. Acceptable for this project.
 
-**Opção A — Cloudflare Flexible (mais simples):**
-- No painel Cloudflare, SSL/TLS → modo **Flexible**.
-- Nginx fica só em `:80` (config acima). Cloudflare faz HTTPS com o usuário.
-- Rápido, mas tráfego Cloudflare→VPS é HTTP. OK para projeto acadêmico.
-
-**Opção B — Cloudflare Full (recomendado):**
-- SSL/TLS → modo **Full (strict)**.
-- Gere um **Origin Certificate** na Cloudflare e instale na VPS, OU use `certbot`:
+**Option B — Full Strict (recommended):**
+- SSL/TLS → **Full (strict)**.
+- Generate a Cloudflare Origin Certificate and install on the VPS, or use Certbot:
 
 ```bash
-sudo certbot --nginx -d listasmart.cakowebber.dev
+sudo certbot --nginx -d listasmart.yourdomain.com
 ```
 
-> Se usar Cloudflare Origin Cert + certbot, garanta que o proxy (nuvem laranja) esteja ligado no DNS record.
-
-Confirme que o registro DNS `listasmart` está com o **proxy ligado** (nuvem laranja) apontando pro IP da VPS, igual aos outros subdomínios (enertracker etc).
+Make sure the DNS record has the **proxy enabled** (orange cloud) pointing to the VPS IP.
 
 ---
 
-## 6. Verificação final
+## 6. Verify
 
 ```bash
-curl https://listasmart.cakowebber.dev/products
-curl https://listasmart.cakowebber.dev/recommendations/trending
+curl https://listasmart.yourdomain.com/products
+curl https://listasmart.yourdomain.com/recommendations/trending
 ```
 
-Dashboard interativo (visualizador em memória):
+Interactive dashboard:
 
 ```
-https://listasmart.cakowebber.dev/
+https://listasmart.yourdomain.com/
 ```
 
 ---
 
-## 7. Atualizar (deploys futuros)
+## 7. Future deploys
 
 ```bash
 cd ~/lista-smart-backend
@@ -167,12 +149,8 @@ pm2 restart listasmart-backend
 
 ---
 
-## Notas
+## Notes
 
-- **Estado em memória:** os dados (eventos, lista, compras) vivem na RAM do processo. Todo `pm2 restart` / reboot **zera tudo** — é o comportamento esperado deste projeto acadêmico (sem banco). Para repopular dados de demonstração, rode o seed apontando para a URL pública:
-  ```bash
-  # edite o BASE em seed.js para https://listasmart.cakowebber.dev (ou rode local na VPS contra 127.0.0.1:3003)
-  node seed.js
-  ```
-- **Sem auth:** intencional. A API é pública; `user-id` vai por header sem validação.
-- **Memória:** PM2 reinicia o processo se passar de 300M (`max_memory_restart` no ecosystem). Como tudo é em memória e cresce com eventos, isso também limpa estado acumulado em uso prolongado.
+- **In-memory state:** data (events, list, purchases) lives in RAM. Every `pm2 restart` or reboot resets everything — expected behavior for this project (no database). To repopulate demo data, run the seed script pointing to the public URL or `127.0.0.1:3003`.
+- **No auth:** intentional. The API is public; `user-id` is passed via header without validation.
+- **Memory limit:** PM2 restarts the process if it exceeds 300MB (`max_memory_restart` in ecosystem config), which also clears accumulated in-memory state.
